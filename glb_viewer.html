@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>GLB Viewer</title>
+<style>
+body { margin:0; overflow:hidden; }
+#info { position:absolute; top:10px; left:10px; color:white; background:rgba(0,0,0,0.6); padding:10px; }
+</style>
+</head>
+<body>
+
+<div id="info">
+Модель: <span id="model"></span><br>
+Деталь: <span id="part"></span>
+</div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.161.0/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js';
+
+const params = new URLSearchParams(window.location.search);
+const modelUrl = params.get('model');
+const partName = params.get('part');
+
+document.getElementById("model").textContent = modelUrl;
+document.getElementById("part").textContent = partName;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(3,3,5);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+
+const light = new THREE.HemisphereLight(0xffffff,0x444444);
+scene.add(light);
+
+const loader = new GLTFLoader();
+
+loader.load(modelUrl, (gltf)=>{
+    const model = gltf.scene;
+    scene.add(model);
+
+    let target = null;
+
+    model.traverse(obj=>{
+        if(obj.name && obj.name.includes(partName)){
+            target = obj;
+        }
+    });
+
+    if(target){
+        target.traverse(c=>{
+            if(c.isMesh){
+                c.material = new THREE.MeshStandardMaterial({color:0xff0000});
+            }
+        });
+
+        const box = new THREE.Box3().setFromObject(target);
+        const center = box.getCenter(new THREE.Vector3());
+        camera.position.set(center.x+2, center.y+2, center.z+2);
+        controls.target.copy(center);
+    }
+
+});
+
+function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene,camera);
+}
+animate();
+</script>
+
+</body>
+</html>
