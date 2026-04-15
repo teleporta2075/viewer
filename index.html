@@ -3,144 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viewer</title>
+  <title>Model Viewer</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     html, body {
       margin: 0;
+      height: 100%;
+      background: #111;
+    }
+    model-viewer {
       width: 100%;
       height: 100%;
-      overflow: hidden;
       background: #111;
-      font-family: Arial, sans-serif;
     }
     #info {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 12px;
+      left: 12px;
       z-index: 10;
-      color: #fff;
+      color: white;
       background: rgba(0,0,0,0.6);
       padding: 10px 12px;
       border-radius: 8px;
-      font-size: 14px;
-    }
-    canvas {
-      display: block;
+      font-family: Arial, sans-serif;
     }
   </style>
 </head>
 <body>
-  <div id="info">Загрузка...</div>
+  <div id="info">Загрузка модели...</div>
 
-  <script type="module">
-    import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
-    import { OrbitControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js";
-    import { GLTFLoader } from "https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js";
+  <model-viewer
+    id="viewer"
+    camera-controls
+    auto-rotate
+    ar
+    shadow-intensity="1"
+    exposure="1"
+    environment-image="neutral">
+  </model-viewer>
 
-    const info = document.getElementById("info");
+  <script>
     const params = new URLSearchParams(window.location.search);
+    const model = params.get("model") || "model.glb";
+    const viewer = document.getElementById("viewer");
+    const info = document.getElementById("info");
 
-    const modelParam = params.get("model") || "model.glb";
-    const partParam = params.get("part") || "";
+    viewer.src = model;
 
-    const modelUrl = new URL(modelParam, window.location.href).href;
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
-
-    const camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      5000
-    );
-    camera.position.set(3, 3, 5);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.body.appendChild(renderer.domElement);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-    scene.add(hemi);
-
-    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-    dir.position.set(10, 10, 10);
-    scene.add(dir);
-
-    const grid = new THREE.GridHelper(20, 20);
-    scene.add(grid);
-
-    const loader = new GLTFLoader();
-
-    function fitObject(object) {
-      const box = new THREE.Box3().setFromObject(object);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const fov = camera.fov * Math.PI / 180;
-      let distance = maxDim / (2 * Math.tan(fov / 2));
-      distance *= 1.8;
-
-      camera.position.set(center.x + distance, center.y + distance * 0.6, center.z + distance);
-      controls.target.copy(center);
-      controls.update();
-    }
-
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        const model = gltf.scene;
-        scene.add(model);
-
-        let found = null;
-
-        if (partParam) {
-          model.traverse((obj) => {
-            if (obj.name && obj.name.toLowerCase().includes(partParam.toLowerCase())) {
-              found = obj;
-            }
-          });
-        }
-
-        if (found) {
-          found.traverse((obj) => {
-            if (obj.isMesh) {
-              obj.material = new THREE.MeshStandardMaterial({ color: 0xff3333 });
-            }
-          });
-          fitObject(found);
-          info.textContent = "Модель загружена. Деталь найдена: " + found.name;
-        } else {
-          fitObject(model);
-          info.textContent = partParam
-            ? "Модель загружена. Деталь не найдена."
-            : "Модель загружена.";
-        }
-      },
-      undefined,
-      (error) => {
-        console.error(error);
-        info.textContent = "Ошибка загрузки модели: " + modelUrl;
-      }
-    );
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+    viewer.addEventListener("load", () => {
+      info.textContent = "Модель загружена";
     });
 
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-    animate();
+    viewer.addEventListener("error", () => {
+      info.textContent = "Ошибка загрузки модели";
+    });
   </script>
 </body>
 </html>
