@@ -21,7 +21,8 @@ import { OrbitControls } from 'https://unpkg.com/three@0.161.0/examples/jsm/cont
 import { GLTFLoader } from 'https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js';
 
 const params = new URLSearchParams(window.location.search);
-const modelUrl = params.get('model');
+const base = window.location.origin + "/viewer/";
+const modelUrl = base + params.get('model');
 const partName = params.get('part');
 
 document.getElementById("model").textContent = modelUrl;
