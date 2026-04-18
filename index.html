@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Viewer</title>
+
   <style>
     html, body {
       margin: 0;
@@ -13,6 +14,7 @@
       background: #111;
       font-family: Arial, sans-serif;
     }
+
     #info {
       position: absolute;
       top: 10px;
@@ -20,192 +22,151 @@
       z-index: 10;
       color: #fff;
       background: rgba(0,0,0,0.7);
-      padding: 10px 12px;
+      padding: 10px;
       border-radius: 8px;
-      font-size: 14px;
-      max-width: 520px;
-      line-height: 1.5;
+      font-size: 12px;
+      max-width: 500px;
       white-space: pre-wrap;
-      word-break: break-word;
-    }
-    canvas {
-      display: block;
     }
   </style>
 </head>
+
 <body>
-  <div id="info">Загрузка...</div>
+<div id="info">Загрузка...</div>
 
-  <script type="module">
-    import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
-    import { OrbitControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js";
-    import { GLTFLoader } from "https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js";
+<script type="module">
+import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
+import { OrbitControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js";
 
-    const info = document.getElementById("info");
-    const params = new URLSearchParams(window.location.search);
+const info = document.getElementById("info");
 
-    const modelUrl = params.get("model") || "https://teleporta2075.github.io/viewer/model.glb";
-    const targetNameRaw = params.get("name") || "";
+const params = new URLSearchParams(window.location.search);
 
-    function norm(s) {
-      return String(s || "")
-        .toLowerCase()
-        .replace(/[\"'`]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    }
+const modelUrl = params.get("model") || "model.glb";
+const targetNameRaw = params.get("name") || "";
 
-    const targetName = norm(targetNameRaw);
+function norm(s){
+  return String(s || "").toLowerCase().trim();
+}
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+const targetName = norm(targetNameRaw);
 
-    const camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      5000
-    );
-    camera.position.set(3, 3, 5);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    document.body.appendChild(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 5000);
+camera.position.set(3,3,5);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.4);
-    scene.add(hemi);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-    dir.position.set(10, 10, 10);
-    scene.add(dir);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.4));
 
-    const grid = new THREE.GridHelper(20, 20, 0x666666, 0x333333);
-    scene.add(grid);
+const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+dir.position.set(10,10,10);
+scene.add(dir);
 
-    const loader = new GLTFLoader();
+const loader = new GLTFLoader();
 
-    function fitBox(box) {
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
+function fitBox(box){
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
 
-      const maxDim = Math.max(size.x, size.y, size.z) || 1;
-      const fov = camera.fov * Math.PI / 180;
-      let distance = maxDim / (2 * Math.tan(fov / 2));
-      distance *= 1.8;
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const distance = maxDim * 2;
 
-      camera.position.set(
-        center.x + distance,
-        center.y + distance * 0.6,
-        center.z + distance
-      );
-      controls.target.copy(center);
-      controls.update();
-    }
+  camera.position.set(center.x + distance, center.y + distance, center.z + distance);
+  controls.target.copy(center);
+  controls.update();
+}
 
-    function chainNames(obj) {
-      const names = [];
-      let cur = obj;
-      while (cur) {
-        if (cur.name) names.push(cur.name);
-        cur = cur.parent;
+loader.load(
+  modelUrl,
+
+  (gltf)=>{
+    const model = gltf.scene;
+    scene.add(model);
+
+    console.log("MODEL LOADED");
+
+    // 🔥 собираем ВСЕ имена
+    const allNames = [];
+
+    model.traverse(obj=>{
+      if(obj.name){
+        allNames.push(obj.name);
       }
-      return names;
-    }
-
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        const model = gltf.scene;
-        scene.add(model);
-
-        const allNames = new Set();
-        const matchedMeshes = [];
-        const matchedRoots = new Set();
-
-        model.traverse((obj) => {
-          if (obj.name) {
-            allNames.add(obj.name);
-          }
-
-          if (!targetName) return;
-
-          const namesToCheck = chainNames(obj).map(norm);
-          const matched = namesToCheck.some((n) =>
-            n === targetName ||
-            n.includes(targetName) ||
-            targetName.includes(n)
-          );
-
-          if (matched && obj.isMesh) {
-            matchedMeshes.push(obj);
-
-            let root = obj;
-            while (root.parent && root.parent !== model) {
-              root = root.parent;
-            }
-            matchedRoots.add(root);
-          }
-        });
-
-        if (matchedMeshes.length === 0) {
-          const fullBox = new THREE.Box3().setFromObject(model);
-          fitBox(fullBox);
-
-          const sampleNames = Array.from(allNames).slice(0, 40).join("\n");
-
-          info.textContent =
-            "Совпадений не найдено.\n\n" +
-            "Ищем:\n" + targetNameRaw + "\n\n" +
-            "Нормализованно:\n" + targetName + "\n\n" +
-            "Примеры имён в модели:\n" + sampleNames;
-
-          return;
-        }
-
-        matchedMeshes.forEach((mesh) => {
-          mesh.material = new THREE.MeshStandardMaterial({
-            color: 0xff3333,
-            emissive: 0x550000,
-            metalness: 0.1,
-            roughness: 0.7
-          });
-        });
-
-        const totalBox = new THREE.Box3();
-        matchedRoots.forEach((obj) => {
-          totalBox.union(new THREE.Box3().setFromObject(obj));
-        });
-
-        fitBox(totalBox);
-
-        info.textContent =
-          "Подсвечено мешей: " + matchedMeshes.length + "\n" +
-          "Ищем имя: " + targetNameRaw;
-      },
-      undefined,
-      (error) => {
-        console.error(error);
-        info.textContent = "Ошибка загрузки модели";
-      }
-    );
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
+    // 👉 всегда показываем список
+    info.textContent =
+      "Всего объектов: " + allNames.length + "\n\n" +
+      "Имена:\n" +
+      allNames.slice(0, 50).join("\n") +
+      (allNames.length > 50 ? "\n..." : "");
+
+    // 👉 если передано имя — ищем
+    if(targetName){
+
+      let found = false;
+
+      model.traverse(obj=>{
+        if(!obj.isMesh) return;
+
+        const n = norm(obj.name);
+
+        if(n.includes(targetName)){
+          obj.material = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0x550000
+          });
+          found = true;
+        }
+      });
+
+      if(found){
+        info.textContent =
+          "НАЙДЕНО: " + targetNameRaw + "\n\n" +
+          "Всего объектов: " + allNames.length;
+      } else {
+        info.textContent =
+          "НЕ НАЙДЕНО: " + targetNameRaw + "\n\n" +
+          "Примеры имен:\n" +
+          allNames.slice(0, 30).join("\n");
+      }
     }
 
-    animate();
-  </script>
+    const box = new THREE.Box3().setFromObject(model);
+    fitBox(box);
+  },
+
+  undefined,
+
+  (error)=>{
+    console.error(error);
+    info.textContent = "Ошибка загрузки модели";
+  }
+);
+
+window.addEventListener("resize", ()=>{
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+</script>
+
 </body>
 </html>
