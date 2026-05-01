@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <title>Viewer</title>
   <style>
-    body { margin:0; overflow:hidden; background:#f2f2f2; }
-
+    body { margin:0; overflow:hidden; background:#ffffff; }
     #info {
       position:absolute;
       top:10px;
@@ -30,6 +29,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
+
 const info = document.getElementById("info");
 
 const params = new URLSearchParams(window.location.search);
@@ -55,10 +55,10 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.enableZoom = true;
-controls.enablePan = true;
 
-scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+
+// 🔥 СВЕТ (яркий)
+scene.add(new THREE.AmbientLight(0xffffff, 1.4));
 
 const light1 = new THREE.DirectionalLight(0xffffff, 2.0);
 light1.position.set(10, 10, 10);
@@ -68,10 +68,8 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
-const light2 = new THREE.DirectionalLight(0xffffff, 0.9);
-light2.position.set(-10, 5, -10);
-scene.add(light2);
 
+// 🔧 подгон камеры
 function fitModel(model){
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
@@ -85,6 +83,8 @@ function fitModel(model){
   controls.update();
 }
 
+
+// 📦 загрузка
 const loader = new THREE.GLTFLoader();
 
 loader.load(
@@ -99,10 +99,12 @@ loader.load(
     model.traverse(function(obj){
       if (!obj.isMesh) return;
 
-
+      // 🔴 подсветка по имени
       if (targetName && obj.name.toLowerCase().includes(targetName)) {
-        obj.material.color.set(0xff0000);
-        obj.material.emissive = new THREE.Color(0x330000);
+        obj.material = new THREE.MeshStandardMaterial({
+          color: 0xff0000,
+          emissive: 0x550000
+        });
         found = true;
       }
     });
@@ -124,18 +126,23 @@ loader.load(
   }
 );
 
+
+// 🔄 ресайз
 window.addEventListener("resize", function(){
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+
+// 🎬 анимация
 function animate(){
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 animate();
+
 </script>
 
 </body>
