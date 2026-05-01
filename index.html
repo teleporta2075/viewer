@@ -39,7 +39,7 @@ const info = document.getElementById("info");
 const params = new URLSearchParams(window.location.search);
 
 let modelUrl = params.get("model");
-const targetName = (params.get("name") || "").toLowerCase().trim();
+const targetName = normalizeName(params.get("name") || "");
 
 if (!modelUrl) {
   info.textContent = "Ошибка: не передан параметр model";
