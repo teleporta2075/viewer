@@ -11,23 +11,19 @@
       top:10px;
       left:10px;
       color:white;
-      background:rgba(0,0,0,0.75);
+      background:rgba(0,0,0,0.65);
       padding:8px 10px;
       font-family:Arial, sans-serif;
-      font-size:12px;
+      font-size:13px;
       border-radius:8px;
       z-index:10;
-      max-height:80vh;
-      max-width:360px;
-      overflow:auto;
-      white-space:pre-wrap;
     }
   </style>
 </head>
 
 <body>
 
-<div id="info">TEST VERSION 12345</div>
+<div id="info">Загрузка...</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -49,18 +45,16 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   5000
 );
+camera.position.set(4, 4, 6);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(1);
-renderer.powerPreference = "high-performance";
+renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.enableZoom = true;
-controls.enablePan = true;
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
@@ -72,50 +66,15 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
-function isValidName(n){
-  if(!n) return false;
-
-  const s = String(n).toLowerCase().trim();
-
-  if(!s) return false;
-
-  return !(
-    s.includes("geom") ||
-    s.includes("geometry") ||
-    s.includes("mesh") ||
-    s.includes("node") ||
-    s.includes("scene") ||
-    s.includes("object") ||
-    s.includes("default") ||
-    s.includes("material")
-  );
-}
-
-function cleanName(n){
-  return String(n)
-    .replace(/geom3d/gi, "")
-    .replace(/geometry/gi, "")
-    .replace(/mesh/gi, "")
-    .replace(/node/gi, "")
-    .replace(/object/gi, "")
-    .replace(/[_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function fitToBox(box, close){
+function fitModel(model){
+  const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
   const maxDim = Math.max(size.x, size.y, size.z);
-  const dist = close ? maxDim * 2.5 : maxDim * 1.8;
+  const dist = maxDim * 1.8;
 
-  camera.position.set(
-    center.x,
-    center.y,
-    center.z + dist
-  );
-
+  camera.position.set(center.x + dist, center.y + dist, center.z + dist);
   controls.target.copy(center);
   controls.update();
 }
@@ -129,66 +88,28 @@ loader.load(
     const model = gltf.scene;
     scene.add(model);
 
-    const names = new Set();
-    let targetObject = null;
+    let found = false;
 
     model.traverse(function(obj){
+      if (!obj.isMesh) return;
 
-      if(isValidName(obj.name)){
-        const cleaned = cleanName(obj.name);
-        if(cleaned) names.add(cleaned);
-      }
+      // ❌ убрали серый цвет полностью
 
-      if (
-        targetName &&
-        obj.name &&
-        obj.name.toLowerCase().includes(targetName) &&
-        !targetObject
-      ) {
-        targetObject = obj;
+      if (targetName && obj.name.toLowerCase().includes(targetName)) {
+        obj.material = new THREE.MeshStandardMaterial({
+          color: 0xff0000,
+          emissive: 0x550000
+        });
+        found = true;
       }
     });
 
-    if (targetObject) {
-
-      model.traverse(function(obj){
-        obj.visible = false;
-      });
-
-      targetObject.traverse(function(obj){
-        obj.visible = true;
-
-        if (obj.isMesh) {
-          obj.material = new THREE.MeshStandardMaterial({
-            color: 0xff0000,
-            emissive: 0xff0000,
-            emissiveIntensity: 1.5,
-            roughness: 0.3,
-            metalness: 0.0,
-            side: THREE.DoubleSide
-          });
-        }
-      });
-
-      const box = new THREE.Box3().setFromObject(targetObject);
-      fitToBox(box, true);
-
-    } else {
-
-      const box = new THREE.Box3().setFromObject(model);
-      fitToBox(box, false);
-    }
-
-    const list = Array.from(names).slice(0, 80).join("\n");
+    fitModel(model);
 
     if (targetName) {
-      info.textContent =
-        (targetObject ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") +
-        targetName +
-        "\n\n" +
-        list;
+      info.textContent = found ? "Найдено: " + targetName : "Не найдено: " + targetName;
     } else {
-      info.textContent = list;
+      info.style.display = "none";
     }
   },
 
