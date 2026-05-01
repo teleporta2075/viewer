@@ -11,16 +11,12 @@
       top:10px;
       left:10px;
       color:white;
-      background:rgba(0,0,0,0.70);
+      background:rgba(0,0,0,0.65);
       padding:8px 10px;
       font-family:Arial, sans-serif;
       font-size:13px;
       border-radius:8px;
       z-index:10;
-      max-width:420px;
-      max-height:80vh;
-      overflow:auto;
-      white-space:pre-wrap;
     }
   </style>
 </head>
@@ -34,6 +30,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
+
 const info = document.getElementById("info");
 
 const params = new URLSearchParams(window.location.search);
@@ -43,24 +40,18 @@ const targetName = (params.get("name") || "").toLowerCase().trim();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
 
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  5000
-);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
 camera.position.set(4, 4, 6);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.powerPreference = "high-performance";
 document.body.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.enableZoom = true;
-controls.enablePan = true;
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
@@ -71,29 +62,6 @@ scene.add(light1);
 const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
-
-function cleanName(name){
-  if (!name) return "";
-  return String(name)
-    .replace(/Geom3D/gi, "")
-    .replace(/Geometry/gi, "")
-    .replace(/Mesh/gi, "")
-    .replace(/Node/gi, "")
-    .replace(/__+/g, "_")
-    .trim();
-}
-
-function isBadName(name){
-  const n = String(name || "").toLowerCase();
-  return (
-    !n ||
-    n.includes("geom3d") ||
-    n.includes("geometry") ||
-    n === "scene" ||
-    n === "mesh" ||
-    n === "node"
-  );
-}
 
 function fitModel(model){
   const box = new THREE.Box3().setFromObject(model);
@@ -118,40 +86,15 @@ loader.load(
     scene.add(model);
 
     let found = false;
-    const names = new Set();
 
     model.traverse(function(obj){
-      const candidates = [
-        obj.name,
-        obj.parent && obj.parent.name,
-        obj.parent && obj.parent.parent && obj.parent.parent.name,
-        obj.material && obj.material.name,
-        obj.geometry && obj.geometry.name
-      ];
-
-      candidates.forEach(function(n){
-        if (!n) return;
-        if (isBadName(n)) return;
-
-        const cleaned = cleanName(n);
-        if (cleaned) names.add(cleaned);
-      });
-
       if (!obj.isMesh) return;
 
-      const searchText = candidates
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      if (targetName && searchText.includes(targetName)) {
+      if (targetName && obj.name.toLowerCase().includes(targetName)) {
         obj.material = new THREE.MeshStandardMaterial({
           color: 0xff0000,
           emissive: 0xff0000,
-          emissiveIntensity: 1.5,
-          roughness: 0.3,
-          metalness: 0.0,
-          side: THREE.DoubleSide
+          emissiveIntensity: 1.5
         });
         found = true;
       }
@@ -159,14 +102,13 @@ loader.load(
 
     fitModel(model);
 
-    const list = Array.from(names).slice(0, 80).join("\n");
-
+    // 👉 ТОЛЬКО результат, без списка
     if (targetName) {
-      info.textContent =
-        (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + targetName +
-        "\n\nИмена объектов:\n" + list;
+      info.textContent = found
+        ? "НАЙДЕНО: " + targetName
+        : "НЕ НАЙДЕНО: " + targetName;
     } else {
-      info.textContent = "Имена объектов:\n" + list;
+      info.style.display = "none";
     }
   },
 
@@ -190,6 +132,7 @@ function animate(){
   renderer.render(scene, camera);
 }
 animate();
+
 </script>
 
 </body>
