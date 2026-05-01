@@ -93,7 +93,7 @@ function cleanName(n){
 function fitToBox(box, close){
   const center = box.getCenter(new THREE.Vector3());
 
-  let dist = close ? 1.5 : 20;
+  let dist = close ? 1.5 : 2;
 
   camera.position.set(
     center.x + dist,
