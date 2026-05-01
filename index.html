@@ -18,6 +18,7 @@
       border-radius:8px;
       z-index:10;
       max-height:80vh;
+      max-width:360px;
       overflow:auto;
       white-space:pre-wrap;
     }
@@ -33,7 +34,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
-
 const info = document.getElementById("info");
 
 const params = new URLSearchParams(window.location.search);
@@ -43,7 +43,12 @@ const targetName = (params.get("name") || "").toLowerCase().trim();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(
+  60,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  5000
+);
 camera.position.set(4, 4, 6);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
@@ -55,6 +60,8 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+controls.enableZoom = true;
+controls.enablePan = true;
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
@@ -66,14 +73,50 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
-function fitToBox(box){
+function isValidName(n){
+  if(!n) return false;
+
+  const s = String(n).toLowerCase().trim();
+
+  if(!s) return false;
+
+  return !(
+    s.includes("geom") ||
+    s.includes("geometry") ||
+    s.includes("mesh") ||
+    s.includes("node") ||
+    s.includes("scene") ||
+    s.includes("object") ||
+    s.includes("default") ||
+    s.includes("material")
+  );
+}
+
+function cleanName(n){
+  return String(n)
+    .replace(/geom3d/gi, "")
+    .replace(/geometry/gi, "")
+    .replace(/mesh/gi, "")
+    .replace(/node/gi, "")
+    .replace(/object/gi, "")
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fitToBox(box, close){
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
   const maxDim = Math.max(size.x, size.y, size.z);
-  const dist = maxDim * 1.8;
+  const dist = maxDim * (close ? 1.0 : 1.8);
 
-  camera.position.set(center.x + dist, center.y + dist, center.z + dist);
+  camera.position.set(
+    center.x + dist,
+    center.y + dist * 0.7,
+    center.z + dist
+  );
+
   controls.target.copy(center);
   controls.update();
 }
@@ -88,48 +131,58 @@ loader.load(
     scene.add(model);
 
     const names = new Set();
-    let foundMeshes = [];
+    const foundMeshes = [];
 
     model.traverse(function(obj){
-
-      if(obj.name) names.add(obj.name);
+      if(isValidName(obj.name)){
+        const cleaned = cleanName(obj.name);
+        if(cleaned) names.add(cleaned);
+      }
 
       if (!obj.isMesh) return;
 
-      if (targetName && obj.name.toLowerCase().includes(targetName)) {
+      const searchText = [
+        obj.name,
+        obj.parent && obj.parent.name,
+        obj.parent && obj.parent.parent && obj.parent.parent.name,
+        obj.material && obj.material.name,
+        obj.geometry && obj.geometry.name
+      ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
+      if (targetName && searchText.includes(targetName)) {
         obj.material = new THREE.MeshStandardMaterial({
           color: 0xff0000,
           emissive: 0xff0000,
-          emissiveIntensity: 1.5
+          emissiveIntensity: 1.5,
+          roughness: 0.3,
+          metalness: 0.0,
+          side: THREE.DoubleSide
         });
 
         foundMeshes.push(obj);
       }
     });
 
-    // 🔥 если нашли объект — фокусируемся на нём
     if(foundMeshes.length > 0){
-
       const box = new THREE.Box3();
-
       foundMeshes.forEach(m => box.expandByObject(m));
-
-      fitToBox(box);
-
+      fitToBox(box, true);
     } else {
       const box = new THREE.Box3().setFromObject(model);
-      fitToBox(box);
+      fitToBox(box, false);
     }
 
-    // 🔥 вывод списка
     const list = Array.from(names).slice(0, 80).join("\n");
 
     if (targetName) {
       info.textContent =
         (foundMeshes.length > 0 ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") +
         targetName +
-        "\n\n" + list;
+        "\n\n" +
+        list;
     } else {
       info.textContent = list;
     }
@@ -155,7 +208,6 @@ function animate(){
   renderer.render(scene, camera);
 }
 animate();
-
 </script>
 
 </body>
