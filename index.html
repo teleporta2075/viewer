@@ -49,7 +49,6 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   5000
 );
-camera.position.set(4, 4, 6);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -60,8 +59,6 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.enableZoom = true;
-controls.enablePan = true;
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
@@ -73,59 +70,41 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
+
+// 🔥 чистим имена
 function isValidName(n){
   if(!n) return false;
-
-  const s = String(n).toLowerCase().trim();
-
-  if(!s) return false;
-
+  const s = n.toLowerCase();
   return !(
     s.includes("geom") ||
-    s.includes("geometry") ||
     s.includes("mesh") ||
     s.includes("node") ||
     s.includes("scene") ||
-    s.includes("object") ||
-    s.includes("default") ||
-    s.includes("material")
+    s.includes("object")
   );
 }
 
 function cleanName(n){
-  return String(n)
-    .replace(/geom3d/gi, "")
-    .replace(/geometry/gi, "")
-    .replace(/mesh/gi, "")
-    .replace(/node/gi, "")
-    .replace(/object/gi, "")
-    .replace(/[_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return n.replace(/[_]+/g, " ").trim();
 }
 
+
+// 🔥 ФИКСИРОВАННАЯ КАМЕРА (15 м)
 function fitToBox(box, close){
-  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
-  const maxDim = Math.max(size.x, size.y, size.z);
-
-
-  let dist = maxDim * (close ? 0.25 : 1.5);
-
-
-  dist = Math.min(dist, 5);   // максимум 5 единиц
-  dist = Math.max(dist, 0.5); // минимум
+  let dist = close ? 15 : 20;
 
   camera.position.set(
     center.x + dist,
-    center.y + dist * 0.3,
+    center.y + dist * 0.35,
     center.z + dist
   );
 
   controls.target.copy(center);
   controls.update();
 }
+
 
 const loader = new THREE.GLTFLoader();
 
@@ -140,32 +119,23 @@ loader.load(
     const foundMeshes = [];
 
     model.traverse(function(obj){
+
       if(isValidName(obj.name)){
-        const cleaned = cleanName(obj.name);
-        if(cleaned) names.add(cleaned);
+        names.add(cleanName(obj.name));
       }
 
       if (!obj.isMesh) return;
 
       const searchText = [
         obj.name,
-        obj.parent && obj.parent.name,
-        obj.parent && obj.parent.parent && obj.parent.parent.name,
-        obj.material && obj.material.name,
-        obj.geometry && obj.geometry.name
-      ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+        obj.parent && obj.parent.name
+      ].filter(Boolean).join(" ").toLowerCase();
 
       if (targetName && searchText.includes(targetName)) {
         obj.material = new THREE.MeshStandardMaterial({
           color: 0xff0000,
           emissive: 0xff0000,
-          emissiveIntensity: 1.5,
-          roughness: 0.3,
-          metalness: 0.0,
-          side: THREE.DoubleSide
+          emissiveIntensity: 1.5
         });
 
         foundMeshes.push(obj);
@@ -202,11 +172,13 @@ loader.load(
   }
 );
 
+
 window.addEventListener("resize", function(){
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
 
 function animate(){
   requestAnimationFrame(animate);
