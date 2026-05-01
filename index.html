@@ -5,6 +5,7 @@
   <title>Viewer</title>
   <style>
     body { margin:0; overflow:hidden; background:#ffffff; }
+
     #info {
       position:absolute;
       top:10px;
@@ -29,7 +30,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
-
 const info = document.getElementById("info");
 
 const params = new URLSearchParams(window.location.search);
@@ -56,11 +56,9 @@ const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
+scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
-// 🔥 СВЕТ (яркий)
-scene.add(new THREE.AmbientLight(0xffffff, 1.4));
-
-const light1 = new THREE.DirectionalLight(0xffffff, 2.0);
+const light1 = new THREE.DirectionalLight(0xffffff, 2.2);
 light1.position.set(10, 10, 10);
 scene.add(light1);
 
@@ -68,8 +66,6 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
-
-// 🔧 подгон камеры
 function fitModel(model){
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
@@ -83,8 +79,6 @@ function fitModel(model){
   controls.update();
 }
 
-
-// 📦 загрузка
 const loader = new THREE.GLTFLoader();
 
 loader.load(
@@ -99,7 +93,8 @@ loader.load(
     model.traverse(function(obj){
       if (!obj.isMesh) return;
 
-      // 🔴 подсветка по имени
+      // ❌ убрали серый цвет полностью
+
       if (targetName && obj.name.toLowerCase().includes(targetName)) {
         obj.material = new THREE.MeshStandardMaterial({
           color: 0xff0000,
@@ -126,23 +121,18 @@ loader.load(
   }
 );
 
-
-// 🔄 ресайз
 window.addEventListener("resize", function(){
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-
-// 🎬 анимация
 function animate(){
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 animate();
-
 </script>
 
 </body>
