@@ -59,6 +59,8 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+controls.enableZoom = true;
+controls.enablePan = true;
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
@@ -70,34 +72,43 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
-
-// 🔥 чистим имена
 function isValidName(n){
   if(!n) return false;
-  const s = n.toLowerCase();
+
+  const s = String(n).toLowerCase().trim();
+
+  if(!s) return false;
+
   return !(
     s.includes("geom") ||
+    s.includes("geometry") ||
     s.includes("mesh") ||
     s.includes("node") ||
     s.includes("scene") ||
-    s.includes("object")
+    s.includes("object") ||
+    s.includes("default") ||
+    s.includes("material")
   );
 }
 
 function cleanName(n){
-  return n.replace(/[_]+/g, " ").trim();
+  return String(n)
+    .replace(/geom3d/gi, "")
+    .replace(/geometry/gi, "")
+    .replace(/mesh/gi, "")
+    .replace(/node/gi, "")
+    .replace(/object/gi, "")
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-
-// 🔥 ФИКСИРОВАННАЯ КАМЕРА (15 м)
 function fitToBox(box, close){
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
   const maxDim = Math.max(size.x, size.y, size.z);
-
-  // очень близко к объекту
-  const dist = close ? maxDim * 0.8 : maxDim * 1.8;
+  const dist = close ? maxDim * 2.5 : maxDim * 1.8;
 
   camera.position.set(
     center.x,
@@ -109,7 +120,6 @@ function fitToBox(box, close){
   controls.update();
 }
 
-
 const loader = new THREE.GLTFLoader();
 
 loader.load(
@@ -120,45 +130,60 @@ loader.load(
     scene.add(model);
 
     const names = new Set();
-    const foundMeshes = [];
+    let targetObject = null;
 
     model.traverse(function(obj){
 
       if(isValidName(obj.name)){
-        names.add(cleanName(obj.name));
+        const cleaned = cleanName(obj.name);
+        if(cleaned) names.add(cleaned);
       }
 
-      if (!obj.isMesh) return;
-
-      const searchText = [
-        obj.name,
-        obj.parent && obj.parent.name
-      ].filter(Boolean).join(" ").toLowerCase();
-
-      if (targetName && searchText.includes(targetName)) {
-        obj.material = new THREE.MeshStandardMaterial({
-          color: 0xff0000,
-          emissive: 0xff0000,
-          emissiveIntensity: 1.5
-        });
-
-        foundMeshes.push(obj);
+      if (
+        targetName &&
+        obj.name &&
+        obj.name.toLowerCase().includes(targetName) &&
+        !targetObject
+      ) {
+        targetObject = obj;
       }
     });
 
-  if(foundMeshes.length > 0){
-  const box = new THREE.Box3().setFromObject(foundMeshes[0]);
-  fitToBox(box, true);
-} else {
-  const box = new THREE.Box3().setFromObject(model);
-  fitToBox(box, false);
-}
+    if (targetObject) {
+
+      model.traverse(function(obj){
+        obj.visible = false;
+      });
+
+      targetObject.traverse(function(obj){
+        obj.visible = true;
+
+        if (obj.isMesh) {
+          obj.material = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 1.5,
+            roughness: 0.3,
+            metalness: 0.0,
+            side: THREE.DoubleSide
+          });
+        }
+      });
+
+      const box = new THREE.Box3().setFromObject(targetObject);
+      fitToBox(box, true);
+
+    } else {
+
+      const box = new THREE.Box3().setFromObject(model);
+      fitToBox(box, false);
+    }
 
     const list = Array.from(names).slice(0, 80).join("\n");
 
     if (targetName) {
       info.textContent =
-        (foundMeshes.length > 0 ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") +
+        (targetObject ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") +
         targetName +
         "\n\n" +
         list;
@@ -175,13 +200,11 @@ loader.load(
   }
 );
 
-
 window.addEventListener("resize", function(){
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
 
 function animate(){
   requestAnimationFrame(animate);
