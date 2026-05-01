@@ -37,8 +37,20 @@
 const info = document.getElementById("info");
 
 const params = new URLSearchParams(window.location.search);
-const modelUrl = params.get("model") || "model.glb";
+
+let modelUrl = params.get("model");
 const targetName = (params.get("name") || "").toLowerCase().trim();
+
+if (!modelUrl) {
+  info.textContent = "Ошибка: не передан параметр model";
+  throw new Error("model parameter is missing");
+}
+
+if (!modelUrl.startsWith("http")) {
+  modelUrl = "https://teleporta2075.github.io/viewer/" + modelUrl;
+}
+
+modelUrl += (modelUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
@@ -163,10 +175,14 @@ loader.load(
 
     if (targetName) {
       info.textContent =
+        "MODEL: " + modelUrl +
+        "\n\n" +
         (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + targetName +
         "\n\nИмена объектов:\n" + list;
     } else {
-      info.textContent = "Имена объектов:\n" + list;
+      info.textContent =
+        "MODEL: " + modelUrl +
+        "\n\nИмена объектов:\n" + list;
     }
   },
 
@@ -174,7 +190,7 @@ loader.load(
 
   function(error){
     console.error(error);
-    info.textContent = "Ошибка загрузки модели";
+    info.textContent = "Ошибка загрузки модели:\n" + modelUrl;
   }
 );
 
