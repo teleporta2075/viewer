@@ -32,17 +32,28 @@
 </head>
 
 <body>
+
 <div id="info">Загрузка...</div>
 
+<!-- 🔥 ВАЖНО: importmap -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+  }
+}
+</script>
+
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/loaders/GLTFLoader.js";
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const info = document.getElementById("info");
 
 const params = new URLSearchParams(window.location.search);
-
 const modelUrl = params.get("model") || "model.glb";
 const targetNameRaw = params.get("name") || "";
 
@@ -94,7 +105,6 @@ loader.load(
 
     console.log("MODEL LOADED");
 
-    // 🔥 собираем ВСЕ имена
     const allNames = [];
 
     model.traverse(obj=>{
@@ -103,14 +113,12 @@ loader.load(
       }
     });
 
-    // 👉 всегда показываем список
     info.textContent =
       "Всего объектов: " + allNames.length + "\n\n" +
       "Имена:\n" +
       allNames.slice(0, 50).join("\n") +
       (allNames.length > 50 ? "\n..." : "");
 
-    // 👉 если передано имя — ищем
     if(targetName){
 
       let found = false;
