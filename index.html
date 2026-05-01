@@ -91,13 +91,17 @@ function cleanName(n){
 
 // 🔥 ФИКСИРОВАННАЯ КАМЕРА (15 м)
 function fitToBox(box, close){
+  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
-  let dist = 1;
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  // очень близко к объекту
+  const dist = close ? maxDim * 0.8 : maxDim * 1.8;
 
   camera.position.set(
-    center.x + dist,
-    center.y + dist * 0.35,
+    center.x,
+    center.y,
     center.z + dist
   );
 
@@ -142,14 +146,13 @@ loader.load(
       }
     });
 
-    if(foundMeshes.length > 0){
-      const box = new THREE.Box3();
-      foundMeshes.forEach(m => box.expandByObject(m));
-      fitToBox(box, true);
-    } else {
-      const box = new THREE.Box3().setFromObject(model);
-      fitToBox(box, false);
-    }
+  if(foundMeshes.length > 0){
+  const box = new THREE.Box3().setFromObject(foundMeshes[0]);
+  fitToBox(box, true);
+} else {
+  const box = new THREE.Box3().setFromObject(model);
+  fitToBox(box, false);
+}
 
     const list = Array.from(names).slice(0, 80).join("\n");
 
