@@ -37,7 +37,7 @@ const modelUrl = params.get("model") || "model.glb";
 const targetName = (params.get("name") || "").toLowerCase().trim();
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf2f2f2);
+scene.background = new THREE.Color(0xffffff);
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -58,11 +58,15 @@ controls.dampingFactor = 0.08;
 controls.enableZoom = true;
 controls.enablePan = true;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 1.8));
+scene.add(new THREE.AmbientLight(0xffffff, 1.2));
 
-const light1 = new THREE.DirectionalLight(0xffffff, 1.6);
+const light1 = new THREE.DirectionalLight(0xffffff, 2.0);
 light1.position.set(10, 10, 10);
 scene.add(light1);
+
+const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
+light2.position.set(-10, 5, -10);
+scene.add(light2);
 
 const light2 = new THREE.DirectionalLight(0xffffff, 0.9);
 light2.position.set(-10, 5, -10);
