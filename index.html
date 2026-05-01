@@ -11,12 +11,16 @@
       top:10px;
       left:10px;
       color:white;
-      background:rgba(0,0,0,0.65);
+      background:rgba(0,0,0,0.70);
       padding:8px 10px;
       font-family:Arial, sans-serif;
       font-size:13px;
       border-radius:8px;
       z-index:10;
+      max-width:420px;
+      max-height:80vh;
+      overflow:auto;
+      white-space:pre-wrap;
     }
   </style>
 </head>
@@ -55,6 +59,8 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+controls.enableZoom = true;
+controls.enablePan = true;
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 
@@ -65,6 +71,29 @@ scene.add(light1);
 const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
+
+function cleanName(name){
+  if (!name) return "";
+  return String(name)
+    .replace(/Geom3D/gi, "")
+    .replace(/Geometry/gi, "")
+    .replace(/Mesh/gi, "")
+    .replace(/Node/gi, "")
+    .replace(/__+/g, "_")
+    .trim();
+}
+
+function isBadName(name){
+  const n = String(name || "").toLowerCase();
+  return (
+    !n ||
+    n.includes("geom3d") ||
+    n.includes("geometry") ||
+    n === "scene" ||
+    n === "mesh" ||
+    n === "node"
+  );
+}
 
 function fitModel(model){
   const box = new THREE.Box3().setFromObject(model);
@@ -89,28 +118,55 @@ loader.load(
     scene.add(model);
 
     let found = false;
+    const names = new Set();
 
     model.traverse(function(obj){
+      const candidates = [
+        obj.name,
+        obj.parent && obj.parent.name,
+        obj.parent && obj.parent.parent && obj.parent.parent.name,
+        obj.material && obj.material.name,
+        obj.geometry && obj.geometry.name
+      ];
+
+      candidates.forEach(function(n){
+        if (!n) return;
+        if (isBadName(n)) return;
+
+        const cleaned = cleanName(n);
+        if (cleaned) names.add(cleaned);
+      });
+
       if (!obj.isMesh) return;
 
-      // ❌ убрали серый цвет полностью
+      const searchText = candidates
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-if (targetName && obj.name.toLowerCase().includes(targetName)) {
-  obj.material = new THREE.MeshStandardMaterial({
-    color: 0xff0000,
-    emissive: 0xff0000,
-    emissiveIntensity: 1.5,
-    roughness: 0.3,
-    metalness: 0.0
-  });
-  found = true;
-}
+      if (targetName && searchText.includes(targetName)) {
+        obj.material = new THREE.MeshStandardMaterial({
+          color: 0xff0000,
+          emissive: 0xff0000,
+          emissiveIntensity: 1.5,
+          roughness: 0.3,
+          metalness: 0.0,
+          side: THREE.DoubleSide
+        });
+        found = true;
+      }
+    });
+
     fitModel(model);
 
+    const list = Array.from(names).slice(0, 80).join("\n");
+
     if (targetName) {
-      info.textContent = found ? "Найдено: " + targetName : "Не найдено: " + targetName;
+      info.textContent =
+        (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + targetName +
+        "\n\nИмена объектов:\n" + list;
     } else {
-      info.style.display = "none";
+      info.textContent = "Имена объектов:\n" + list;
     }
   },
 
