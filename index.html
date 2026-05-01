@@ -11,12 +11,15 @@
       top:10px;
       left:10px;
       color:white;
-      background:rgba(0,0,0,0.65);
+      background:rgba(0,0,0,0.75);
       padding:8px 10px;
       font-family:Arial, sans-serif;
-      font-size:13px;
+      font-size:12px;
       border-radius:8px;
       z-index:10;
+      max-height:80vh;
+      overflow:auto;
+      white-space:pre-wrap;
     }
   </style>
 </head>
@@ -45,7 +48,7 @@ camera.position.set(4, 4, 6);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(1);
 renderer.powerPreference = "high-performance";
 document.body.appendChild(renderer.domElement);
 
@@ -63,8 +66,7 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
-function fitModel(model){
-  const box = new THREE.Box3().setFromObject(model);
+function fitToBox(box){
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
@@ -84,31 +86,52 @@ loader.load(
   function(gltf){
     const model = gltf.scene;
     scene.add(model);
-alert("MODEL LOADED");
-    let found = false;
+
+    const names = new Set();
+    let foundMeshes = [];
 
     model.traverse(function(obj){
+
+      if(obj.name) names.add(obj.name);
+
       if (!obj.isMesh) return;
 
       if (targetName && obj.name.toLowerCase().includes(targetName)) {
+
         obj.material = new THREE.MeshStandardMaterial({
           color: 0xff0000,
           emissive: 0xff0000,
           emissiveIntensity: 1.5
         });
-        found = true;
+
+        foundMeshes.push(obj);
       }
     });
 
-    fitModel(model);
+    // 🔥 если нашли объект — фокусируемся на нём
+    if(foundMeshes.length > 0){
 
-    // 👉 ТОЛЬКО результат, без списка
-    if (targetName) {
-      info.textContent = found
-        ? "НАЙДЕНО: " + targetName
-        : "НЕ НАЙДЕНО: " + targetName;
+      const box = new THREE.Box3();
+
+      foundMeshes.forEach(m => box.expandByObject(m));
+
+      fitToBox(box);
+
     } else {
-      info.style.display = "none";
+      const box = new THREE.Box3().setFromObject(model);
+      fitToBox(box);
+    }
+
+    // 🔥 вывод списка
+    const list = Array.from(names).slice(0, 80).join("\n");
+
+    if (targetName) {
+      info.textContent =
+        (foundMeshes.length > 0 ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") +
+        targetName +
+        "\n\n" + list;
+    } else {
+      info.textContent = list;
     }
   },
 
