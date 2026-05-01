@@ -39,7 +39,8 @@ const info = document.getElementById("info");
 const params = new URLSearchParams(window.location.search);
 
 let modelUrl = params.get("model");
-const targetName = normalizeName(params.get("name") || "");
+const targetNameRaw = params.get("name") || "";
+const targetName = normalizeName(targetNameRaw);
 
 if (!modelUrl) {
   info.textContent = "Ошибка: не передан параметр model";
@@ -83,6 +84,13 @@ scene.add(light1);
 const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
+
+function normalizeName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[_\s]+/g, "")
+    .trim();
+}
 
 function cleanName(name){
   if (!name) return "";
@@ -151,10 +159,11 @@ loader.load(
 
       if (!obj.isMesh) return;
 
-      const searchText = candidates
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+      const searchText = normalizeName(
+        candidates
+          .filter(Boolean)
+          .join(" ")
+      );
 
       if (targetName && searchText.includes(targetName)) {
         obj.material = new THREE.MeshStandardMaterial({
@@ -177,7 +186,7 @@ loader.load(
       info.textContent =
         "MODEL: " + modelUrl +
         "\n\n" +
-        (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + targetName +
+        (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + targetNameRaw +
         "\n\nИмена объектов:\n" + list;
     } else {
       info.textContent =
