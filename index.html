@@ -99,9 +99,6 @@ loader.load(
     model.traverse(function(obj){
       if (!obj.isMesh) return;
 
-      obj.material = obj.material.clone();
-      obj.material.color.set(0xaaaaaa);
-      obj.material.side = THREE.DoubleSide;
 
       if (targetName && obj.name.toLowerCase().includes(targetName)) {
         obj.material.color.set(0xff0000);
