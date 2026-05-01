@@ -3,24 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <title>Viewer</title>
+
   <style>
-    body { margin:0; overflow:hidden; background:#ffffff; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #ffffff;
+    }
 
     #info {
-      position:absolute;
-      top:10px;
-      left:10px;
-      color:white;
-      background:rgba(0,0,0,0.70);
-      padding:8px 10px;
-      font-family:Arial, sans-serif;
-      font-size:13px;
-      border-radius:8px;
-      z-index:10;
-      max-width:420px;
-      max-height:80vh;
-      overflow:auto;
-      white-space:pre-wrap;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      background: rgba(0,0,0,0.70);
+      padding: 10px 12px;
+      font-family: Arial, sans-serif;
+      font-size: 15px;
+      border-radius: 8px;
+      z-index: 10;
+      max-width: 480px;
+      max-height: 80vh;
+      overflow: auto;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -40,6 +45,9 @@ const params = new URLSearchParams(window.location.search);
 
 let modelUrl = params.get("model");
 const targetNameRaw = params.get("name") || "";
+const standName = params.get("stand") || "Модель";
+
+// Для поиска: сравниваем мягко, но НЕ портим отображаемые имена
 const targetName = normalizeName(targetNameRaw);
 
 if (!modelUrl) {
@@ -62,9 +70,10 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   5000
 );
+
 camera.position.set(4, 4, 6);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
@@ -85,37 +94,37 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
+// Нормализация только для ПОИСКА
+// Пробелы и нижние подчёркивания считаем одинаковыми
 function normalizeName(value) {
   return String(value || "")
     .toLowerCase()
-    .replace(/[_\s]+/g, "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-function cleanName(name){
-  if (!name) return "";
-  return String(name)
-    .replace(/Geom3D/gi, "")
-    .replace(/Geometry/gi, "")
-    .replace(/Mesh/gi, "")
-    .replace(/Node/gi, "")
-    .replace(/__+/g, "_")
-    .trim();
+// Для ОТОБРАЖЕНИЯ имя не ломаем
+function displayName(name) {
+  return String(name || "").trim();
 }
 
-function isBadName(name){
-  const n = String(name || "").toLowerCase();
+function isBadName(name) {
+  const n = String(name || "").toLowerCase().trim();
+
   return (
     !n ||
-    n.includes("geom3d") ||
-    n.includes("geometry") ||
     n === "scene" ||
     n === "mesh" ||
-    n === "node"
+    n === "node" ||
+    n === "geometry" ||
+    n === "geom3d" ||
+    n.includes("geom3d") ||
+    n.includes("geometry")
   );
 }
 
-function fitModel(model){
+function fitModel(model) {
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
@@ -133,14 +142,14 @@ const loader = new THREE.GLTFLoader();
 loader.load(
   modelUrl,
 
-  function(gltf){
+  function(gltf) {
     const model = gltf.scene;
     scene.add(model);
 
     let found = false;
     const names = new Set();
 
-    model.traverse(function(obj){
+    model.traverse(function(obj) {
       const candidates = [
         obj.name,
         obj.parent && obj.parent.name,
@@ -149,12 +158,15 @@ loader.load(
         obj.geometry && obj.geometry.name
       ];
 
-      candidates.forEach(function(n){
+      candidates.forEach(function(n) {
         if (!n) return;
         if (isBadName(n)) return;
 
-        const cleaned = cleanName(n);
-        if (cleaned) names.add(cleaned);
+        const shown = displayName(n);
+
+        if (shown) {
+          names.add(shown);
+        }
       });
 
       if (!obj.isMesh) return;
@@ -174,46 +186,48 @@ loader.load(
           metalness: 0.0,
           side: THREE.DoubleSide
         });
+
         found = true;
       }
     });
 
     fitModel(model);
 
-    const list = Array.from(names).slice(0, 80).join("\n");
+    const list = Array.from(names).slice(0, 100).join("\n");
 
-    if (targetName) {
+    if (targetNameRaw) {
       info.textContent =
-        "MODEL: " + modelUrl +
+        "СТЕНД: " + standName +
         "\n\n" +
         (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + targetNameRaw +
         "\n\nИмена объектов:\n" + list;
     } else {
       info.textContent =
-        "MODEL: " + modelUrl +
+        "СТЕНД: " + standName +
         "\n\nИмена объектов:\n" + list;
     }
   },
 
   undefined,
 
-  function(error){
+  function(error) {
     console.error(error);
     info.textContent = "Ошибка загрузки модели:\n" + modelUrl;
   }
 );
 
-window.addEventListener("resize", function(){
+window.addEventListener("resize", function() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-function animate(){
+function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
+
 animate();
 </script>
 
