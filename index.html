@@ -109,11 +109,17 @@ function fitToBox(box, close){
   const center = box.getCenter(new THREE.Vector3());
 
   const maxDim = Math.max(size.x, size.y, size.z);
-  const dist = maxDim * (close ? 0.5 : 1.8);
+
+
+  let dist = maxDim * (close ? 0.25 : 1.5);
+
+
+  dist = Math.min(dist, 5);   // максимум 5 единиц
+  dist = Math.max(dist, 0.5); // минимум
 
   camera.position.set(
     center.x + dist,
-    center.y + dist * 0.7,
+    center.y + dist * 0.3,
     center.z + dist
   );
 
