@@ -22,7 +22,7 @@
       font-size: 15px;
       border-radius: 8px;
       z-index: 10;
-      max-width: 480px;
+      max-width: 520px;
       max-height: 80vh;
       overflow: auto;
       white-space: pre-wrap;
@@ -94,6 +94,19 @@ const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
 light2.position.set(-10, 5, -10);
 scene.add(light2);
 
+const highlightColors = [
+  0xff0000,
+  0xff8800,
+  0xffff00,
+  0x00ff00,
+  0x00ffff,
+  0x0066ff,
+  0xaa00ff,
+  0xff00aa,
+  0xffffff,
+  0x8b4513
+];
+
 function normalizeName(value) {
   return String(value || "")
     .toLowerCase()
@@ -147,7 +160,10 @@ loader.load(
     scene.add(model);
 
     let found = false;
+    let foundCount = 0;
+
     const names = new Set();
+    const foundNames = [];
 
     model.traverse(function(obj) {
       const candidates = [
@@ -175,22 +191,37 @@ loader.load(
       );
 
       if (targetName && searchText.includes(targetName)) {
+        const color = highlightColors[foundCount % highlightColors.length];
+
         obj.material = new THREE.MeshStandardMaterial({
-          color: 0xff0000,
-          emissive: 0xff0000,
-          emissiveIntensity: 1.5,
+          color: color,
+          emissive: color,
+          emissiveIntensity: 1.4,
           roughness: 0.3,
           metalness: 0.0,
           side: THREE.DoubleSide
         });
 
+        let shownFoundName = "";
+
+        for (let i = 0; i < candidates.length; i++) {
+          if (candidates[i] && !isBadName(candidates[i])) {
+            shownFoundName = displayName(candidates[i]);
+            break;
+          }
+        }
+
+        foundNames.push((foundCount + 1) + ". " + (shownFoundName || displayName(targetNameRaw)));
+
         found = true;
+        foundCount++;
       }
     });
 
     fitModel(model);
 
     const list = Array.from(names).slice(0, 100).join("\n");
+    const foundList = foundNames.join("\n");
     const shownTargetName = displayName(targetNameRaw);
 
     if (targetNameRaw) {
@@ -198,6 +229,8 @@ loader.load(
         "СТЕНД: " + standName +
         "\n\n" +
         (found ? "НАЙДЕНО: " : "НЕ НАЙДЕНО: ") + shownTargetName +
+        "\nКоличество найденных объектов: " + foundCount +
+        (foundList ? "\n\nПодсвеченные детали:\n" + foundList : "") +
         "\n\nИмена объектов:\n" + list;
     } else {
       info.textContent =
