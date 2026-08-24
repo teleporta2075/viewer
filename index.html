@@ -108,22 +108,25 @@ const highlightColors = [
 ];
 
 function normalizeName(value) {
-  return String(value || "")
+  let s = String(value || "");
+
+  try {
+    s = decodeURIComponent(s);
+  } catch (e) {}
+
+  try {
+    s = decodeURIComponent(s);
+  } catch (e) {}
+
+  return s
     .normalize("NFKC")
     .toLowerCase()
-
-    // Все варианты знака размера приводим к латинской x
     .replace(/[х×]/g, "x")
-
-    // Решётка не влияет на поиск
+    .replace(/%23/gi, " ")
     .replace(/#/g, " ")
-
-    // Подчёркивание считаем пробелом
     .replace(/_/g, " ")
-
-    // Убираем лишние пробелы
+    .replace(/[|;:,]+/g, " ")
     .replace(/\s+/g, " ")
-
     .trim();
 }
 
