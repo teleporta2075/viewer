@@ -118,12 +118,13 @@ function normalizeName(value) {
     s = decodeURIComponent(s);
   } catch (e) {}
 
+  // Полностью отбрасываем # и всё после него
+  s = s.split("#")[0];
+
   return s
     .normalize("NFKC")
     .toLowerCase()
     .replace(/[х×]/g, "x")
-    .replace(/%23/gi, "")
-    .replace(/#/g, "")
     .replace(/_/g, " ")
     .replace(/[|;:,]+/g, " ")
     .replace(/\s+/g, " ")
